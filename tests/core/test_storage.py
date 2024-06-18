@@ -116,6 +116,26 @@ class StorageTest(unittest.TestCase):
             self.storage._check_database_timezone()
         self.assertEqual(str(cm.exception), 'Unexpected database timezone PST')
 
+    def test_check_database_encoding_utf8(self):
+        # Mock the database response to return UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='utf8')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that no exception is raised
+        self.storage._check_database_encoding()
+
+    def test_check_database_encoding_non_utf8(self):
+        # Mock the database response to return non-UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='latin1')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that an AssertionError is raised
+        with self.assertRaises(AssertionError) as cm:
+            self.storage._check_database_encoding()
+        self.assertEqual(str(cm.exception), 'Unexpected database encoding latin1')
+
 
 class MemoryBasedStorageTest(unittest.TestCase):
     def test_backend_raise_not_implemented_error(self):
