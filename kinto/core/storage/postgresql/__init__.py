@@ -131,7 +131,10 @@ class Storage(StorageBase, MigratorMixin):
             obj = result.fetchone()
         encoding = obj.encoding.lower()
         if encoding != "utf8":  # pragma: no cover
+            coverage_data_check_database_encoding["branch 1"] += 1
             raise AssertionError(f"Unexpected database encoding {encoding}")
+        else:
+            coverage_data_check_database_encoding["branch 2"] += 1
 
     def get_installed_version(self):
         """Return current version of schema or None if not any found."""
@@ -1016,8 +1019,19 @@ def print_coverage_data_check_database_timezone():
     coverage_percentage = (total_executed / total_branches_check_database_timezone) * 100
     print(f"Total Coverage: {coverage_percentage:.2f}%")
 
+# Function to print coverage data for _check_database_encoding
+def print_coverage_data_check_database_encoding():
+    print("Branch Coverage Report for function Storage._check_database_encoding:")
+    print(f"Number of Branches: {total_branches_check_database_encoding}")
+    total_executed = sum(1 for count in coverage_data_check_database_encoding.values() if count > 0)
+    for branch, count in coverage_data_check_database_encoding.items():
+        print(f"{branch.replace('_', ' ').capitalize()}: executed {count} time(s)")
+    coverage_percentage = (total_executed / total_branches_check_database_encoding) * 100
+    print(f"Total Coverage: {coverage_percentage:.2f}%")
+
 # Add a call to print coverage data at the end of the program
 atexit.register(print_coverage_data_check_database_timezone)
+atexit.register(print_coverage_data_check_database_encoding)
 
 UNKNOWN_SCHEMA_VERSION_MESSAGE = """
 Missing schema history. Perhaps at some point, this Kinto server was
