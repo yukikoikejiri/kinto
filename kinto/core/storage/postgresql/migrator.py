@@ -2,6 +2,7 @@
 A helper class to run migrations using a series of SQL files.
 """
 
+import atexit
 import logging
 import os
 
@@ -33,6 +34,12 @@ class MigratorMixin:
     """
     migrations_directory = None
 
+    ### INSTRUMENTATION DATA STRUCTURE ###
+    coverage_data_create_schema = {
+    "branch 1": 0, ##if not dry_run
+    "branch 2": 0, ##implicit else
+    }
+
     def get_installed_version(self):
         """Return current version of schema or None if none found.
 
@@ -56,6 +63,7 @@ class MigratorMixin:
 
         self.migrate_schema(version, dry_run)
 
+    ### SELECTED FUNCTION ###
     def create_schema(self, dry_run):
         """Actually create the schema from scratch using self.schema_file.
 
@@ -65,8 +73,13 @@ class MigratorMixin:
             f"Create PostgreSQL {self.name} schema at version {self.schema_version} from {self.schema_file}."
         )
         if not dry_run:
+            ## BRANCH 1 ##
+            MigratorMixin.coverage_data_create_schema["branch 1"] += 1
             self._execute_sql_file(self.schema_file)
             logger.info(f"Created PostgreSQL {self.name} schema (version {self.schema_version}).")
+        else:
+            ## BRANCH 2 ##
+            MigratorMixin.coverage_data_create_schema["branch 2"] += 1
 
     def migrate_schema(self, start_version, dry_run):
         migrations = [(v, v + 1) for v in range(start_version, self.schema_version)]
@@ -96,3 +109,15 @@ class MigratorMixin:
         # Since called outside request, force commit.
         with self.client.connect(force_commit=True) as conn:
             conn.execute(sa.text(schema))
+
+    def print_coverage_data_create_schema():
+        print("Branch Coverage Report for function create_schema:")
+        print(f"Number of Branches: {len(MigratorMixin.coverage_data_create_schema)}")
+        total_executed = sum(1 for count in MigratorMixin.coverage_data_create_schema.values() if count > 0)
+        for branch, count in MigratorMixin.coverage_data_create_schema.items():
+            print(f"{branch}: executed {count} time(s)")
+        coverage_percentage = (total_executed / len(MigratorMixin.coverage_data_create_schema)) * 100
+        print(f"Total Coverage: {coverage_percentage:.2f}% \n")
+
+
+    atexit.register(print_coverage_data_create_schema)
