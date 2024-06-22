@@ -21,6 +21,18 @@ class MigratorTest(unittest.TestCase):
         migrations_directory = os.path.join(here, "migrations")
         self.migrator.migrations_directory = migrations_directory
         self.migrator.schema_version = 6
+        self.migrator.schema_file = os.path.join(migrations_directory, "schema.sql")
+        self.migrator.name = "example"
+
+    def test_create_schema_without_dry_run(self, execute_sql):
+        # Test the 'if not dry_run' branch
+        self.migrator.create_schema(dry_run=False)
+        execute_sql.assert_called_once_with(self.migrator.schema_file)
+
+    def test_create_schema_with_dry_run(self, execute_sql):
+        # Test the 'else' branch
+        self.migrator.create_schema(dry_run=True)
+        execute_sql.assert_not_called()
 
     def test_schema_is_created_if_no_version(self, execute_sql):
         with mock.patch.object(self.migrator, "create_schema") as create_schema:
@@ -68,6 +80,8 @@ class MigratorTest(unittest.TestCase):
             current.return_value = -1
             self.assertRaises(AssertionError, self.migrator.create_or_migrate_schema)
 
+if __name__ == "__main__":
+    unittest.main()
 
 @skip_if_no_postgresql
 class PostgresqlStorageMigrationTest(unittest.TestCase):
