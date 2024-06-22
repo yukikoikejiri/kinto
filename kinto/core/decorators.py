@@ -12,8 +12,8 @@ class cache_forever:
     coverage_data_call = {
     "branch 1": 0, ##if self.saved is none
     "branch 2": 0, ##isinstance
-    "branch 1": 0, ##first implicit else
-    "branch 2": 0, ##second implicit else
+    "branch 3": 0, ##first implicit else
+    "branch 4": 0, ##second implicit else
     }
 
 
