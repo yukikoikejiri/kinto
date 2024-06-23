@@ -1,3 +1,4 @@
+import atexit
 import logging
 import os
 import warnings
@@ -21,6 +22,11 @@ from kinto.core.utils import sqlalchemy as sa
 logger = logging.getLogger(__name__)
 HERE = os.path.dirname(__file__)
 
+# Instrumentation data structure for Storage._check_database_timezone
+coverage_data_check_database_timezone = {
+    "branch 1": 0, "branch 2": 0,
+}
+total_branches_check_database_timezone = len(coverage_data_check_database_timezone)
 
 class Storage(StorageBase, MigratorMixin):
     """Storage backend using PostgreSQL.
@@ -108,7 +114,10 @@ class Storage(StorageBase, MigratorMixin):
         if timezone != "UTC":  # pragma: no cover
             msg = f"Database timezone is not UTC ({timezone})"
             warnings.warn(msg)
+            coverage_data_check_database_timezone["branch 1"] += 1
             logger.warning(msg)
+        else:
+            coverage_data_check_database_timezone["branch 2"] += 1
 
     def _check_database_encoding(self):
         # Make sure database is UTF-8.
@@ -122,7 +131,10 @@ class Storage(StorageBase, MigratorMixin):
             obj = result.fetchone()
         encoding = obj.encoding.lower()
         if encoding != "utf8":  # pragma: no cover
+            coverage_data_check_database_encoding["branch 1"] += 1
             raise AssertionError(f"Unexpected database encoding {encoding}")
+        else:
+            coverage_data_check_database_encoding["branch 2"] += 1
 
     def get_installed_version(self):
         """Return current version of schema or None if not any found."""
@@ -997,6 +1009,29 @@ def load_from_config(config):
     client = create_from_config(config, prefix="storage_")
     return Storage(client=client, max_fetch_size=max_fetch_size, readonly=readonly)
 
+# Function to print coverage data for _check_database_timezone
+def print_coverage_data_check_database_timezone():
+    print("Branch Coverage Report for function Storage._check_database_timezone:")
+    print(f"Number of Branches: {total_branches_check_database_timezone}")
+    total_executed = sum(1 for count in coverage_data_check_database_timezone.values() if count > 0)
+    for branch, count in coverage_data_check_database_timezone.items():
+        print(f"{branch.replace('_', ' ').capitalize()}: executed {count} time(s)")
+    coverage_percentage = (total_executed / total_branches_check_database_timezone) * 100
+    print(f"Total Coverage: {coverage_percentage:.2f}%")
+
+# Function to print coverage data for _check_database_encoding
+def print_coverage_data_check_database_encoding():
+    print("Branch Coverage Report for function Storage._check_database_encoding:")
+    print(f"Number of Branches: {total_branches_check_database_encoding}")
+    total_executed = sum(1 for count in coverage_data_check_database_encoding.values() if count > 0)
+    for branch, count in coverage_data_check_database_encoding.items():
+        print(f"{branch.replace('_', ' ').capitalize()}: executed {count} time(s)")
+    coverage_percentage = (total_executed / total_branches_check_database_encoding) * 100
+    print(f"Total Coverage: {coverage_percentage:.2f}%")
+
+# Add a call to print coverage data at the end of the program
+atexit.register(print_coverage_data_check_database_timezone)
+atexit.register(print_coverage_data_check_database_encoding)
 
 UNKNOWN_SCHEMA_VERSION_MESSAGE = """
 Missing schema history. Perhaps at some point, this Kinto server was

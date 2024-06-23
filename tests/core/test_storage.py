@@ -1,6 +1,7 @@
 from unittest import mock
-
+import unittest
 import pytest
+import logging
 
 from kinto.core import DEFAULT_SETTINGS
 from kinto.core.storage import (
@@ -18,6 +19,7 @@ from kinto.core.storage.utils import paginated
 from kinto.core.testing import skip_if_no_postgresql, unittest
 from kinto.core.utils import COMPARISON
 from kinto.core.utils import sqlalchemy as sa
+from kinto.core.storage.postgresql import Storage
 
 
 class GeneratorTest(unittest.TestCase):
@@ -85,6 +87,54 @@ class StorageBaseTest(unittest.TestCase):
     def test_backenderror_message_default_to_original_exception_message(self):
         error = exceptions.BackendError(ValueError("Pool Error"))
         self.assertEqual(str(error), "ValueError: Pool Error")
+
+# Setting up logger
+logger = logging.getLogger(__name__)
+
+class StorageTest(unittest.TestCase):
+    def setUp(self):
+        self.client_mock = mock.MagicMock()
+        self.storage = Storage(self.client_mock, max_fetch_size=1000)
+
+    def test_check_database_timezone_utc(self):
+        # Mock the database response to return UTC
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(timezone='UTC')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that no exception is raised
+        self.storage._check_database_timezone()
+
+    def test_check_database_timezone_non_utc(self):
+        # Mock the database response to return non-UTC
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(timezone='PST')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that an AssertionError is raised
+        with self.assertRaises(AssertionError) as cm:
+            self.storage._check_database_timezone()
+        self.assertEqual(str(cm.exception), 'Unexpected database timezone PST')
+
+    def test_check_database_encoding_utf8(self):
+        # Mock the database response to return UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='utf8')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that no exception is raised
+        self.storage._check_database_encoding()
+
+    def test_check_database_encoding_non_utf8(self):
+        # Mock the database response to return non-UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='latin1')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that an AssertionError is raised
+        with self.assertRaises(AssertionError) as cm:
+            self.storage._check_database_encoding()
+        self.assertEqual(str(cm.exception), 'Unexpected database encoding latin1')
 
 
 class MemoryBasedStorageTest(unittest.TestCase):
