@@ -1,5 +1,6 @@
 from unittest import mock
 
+import unittest
 from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 
@@ -19,17 +20,56 @@ class TestedClass:
         pass
 
 
-class StatsDMissing(unittest.TestCase):
+#The previous StatsdMissing class has been added to to work for the test cases
+#Several lines had to be added to mock the client so it runs withouth the module and doesnt raise an error
+class StatsdMissing(unittest.TestCase):
     def setUp(self):
         self.previous = statsd.statsd_module
         statsd.statsd_module = None
+
+        # Mock statsd_module for the purpose of the tests
+        self.mock_statsd_module = mock.MagicMock()
+        statsd.statsd_module = self.mock_statsd_module
+
+
+        # Creating a real instance of Client
+        self.client = statsd.Client("localhost", 1234, "prefix")
+        self.client._client = mock.MagicMock()  # Mocks the internal client
 
     def tearDown(self):
         statsd.statsd_module = self.previous
 
     def test_client_instantiation_raises_properly(self):
+        statsd.statsd_module = None  # Simulate statsd_module being unavailable
         with self.assertRaises(ConfigurationError):
             statsd.load_from_config(mock.MagicMock())
+
+        statsd.statsd_module = self.mock_statsd_module  # Restores the mock
+
+#NEW TEST CASES FOR COUNT
+    def test_count_increments_when_unique_is_none(self):
+        self.client.count("test_key")  # covers unique is none so 21
+        self.client._client.incr.assert_called_with("test_key", count=1)
+
+    def test_count_sets_value_when_unique_is_not_none(self):
+        self.client.count("test_key", unique="unique_value")  # covers unique is not none, unique = unique_value, so 22
+        self.client._client.set.assert_called_with("test_key", "unique_value")
+
+#NEW TEST CASES FOR STATSD_COUNT
+    def test_statsd_count_does_not_raise_when_statsd_is_missing(self):
+        request = mock.MagicMock()
+        request.registry.statsd = None
+        statsd.statsd_count(request, "test_key")  #stasd is missing, therefore 42 count is not raised
+    
+    def test_statsd_count_calls_count_method_when_statsd_is_present(self):
+        request = mock.MagicMock()
+        mock_statsd = mock.MagicMock()
+        request.registry.statsd = mock_statsd       #statsd is given, therefore 41, count is called
+
+        statsd.statsd_count(request, "test_key")
+
+        mock_statsd.count.assert_called_once_with("test_key")
+
 
 
 @skip_if_no_statsd
