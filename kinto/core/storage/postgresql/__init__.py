@@ -28,6 +28,12 @@ coverage_data_check_database_timezone = {
 }
 total_branches_check_database_timezone = len(coverage_data_check_database_timezone)
 
+# Instrumentation data structure for Storage._check_database_encoding
+coverage_data_check_database_encoding = {
+    "branch 1": 0, "branch 2": 0,
+}
+total_branches_check_database_encoding = len(coverage_data_check_database_encoding)
+
 class Storage(StorageBase, MigratorMixin):
     """Storage backend using PostgreSQL.
 
