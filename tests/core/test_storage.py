@@ -112,6 +112,25 @@ class StorageTimezoneEncodingTest(unittest.TestCase):
         with self.assertWarns(Warning):
             self.storage._check_database_timezone()
 
+    def test_check_database_encoding_utf8(self):
+        # Mock the database response to return UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='utf8')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that no exception is raised
+        self.storage._check_database_encoding()
+
+    def test_check_database_encoding_non_utf8(self):
+        # Mock the database response to return non-UTF-8
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = mock.Mock(encoding='latin1')
+        self.client_mock.connect.return_value.__enter__.return_value = mock_conn
+
+        # Call the method and assert that an AssertionError is raised
+        with self.assertRaises(AssertionError):
+            self.storage._check_database_encoding()
+
 if __name__ == '__main__':
     unittest.main()
 
