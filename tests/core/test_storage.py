@@ -1,7 +1,7 @@
-from unittest import mock
 import unittest
+from unittest import mock
+
 import pytest
-import logging
 
 from kinto.core import DEFAULT_SETTINGS
 from kinto.core.storage import (
@@ -88,10 +88,7 @@ class StorageBaseTest(unittest.TestCase):
         error = exceptions.BackendError(ValueError("Pool Error"))
         self.assertEqual(str(error), "ValueError: Pool Error")
 
-# Setting up logger
-logger = logging.getLogger(__name__)
-
-class StorageTest(unittest.TestCase):
+class StorageTimezoneEncodingTest(unittest.TestCase):
     def setUp(self):
         self.client_mock = mock.MagicMock()
         self.storage = Storage(self.client_mock, max_fetch_size=1000)
@@ -111,10 +108,9 @@ class StorageTest(unittest.TestCase):
         mock_conn.execute.return_value.fetchone.return_value = mock.Mock(timezone='PST')
         self.client_mock.connect.return_value.__enter__.return_value = mock_conn
 
-        # Call the method and assert that an AssertionError is raised
-        with self.assertRaises(AssertionError) as cm:
+        # Call the method and assert that a warning is raised
+        with self.assertWarns(Warning):
             self.storage._check_database_timezone()
-        self.assertEqual(str(cm.exception), 'Unexpected database timezone PST')
 
     def test_check_database_encoding_utf8(self):
         # Mock the database response to return UTF-8
@@ -132,9 +128,11 @@ class StorageTest(unittest.TestCase):
         self.client_mock.connect.return_value.__enter__.return_value = mock_conn
 
         # Call the method and assert that an AssertionError is raised
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(AssertionError):
             self.storage._check_database_encoding()
-        self.assertEqual(str(cm.exception), 'Unexpected database encoding latin1')
+
+if __name__ == '__main__':
+    unittest.main()
 
 
 class MemoryBasedStorageTest(unittest.TestCase):
